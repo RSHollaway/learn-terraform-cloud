@@ -1,5 +1,5 @@
 terraform {
-
+/*
   cloud {
     organization = "RandyHollaway"
 
@@ -7,7 +7,7 @@ terraform {
       name = "learn-terraform-cloud"
     }
   }
-
+*/
   required_providers {
     aws = {
       source  = "hashicorp/aws"
