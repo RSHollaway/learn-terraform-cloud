@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
   tags = {
@@ -76,24 +76,58 @@ resource "aws_security_group" "main" {
 
 data "aws_ami" "ubuntu" {
   most_recent = true
+
   filter {
     name   = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
   }
+
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+
   owners = ["099720109477"] # Canonical
 }
 
+resource "aws_iam_role" "ec2" {
+  name = "ec2-basic-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_attach" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "ec2-basic-profile"
+  role = aws_iam_role.ec2.name
+}
+
 resource "aws_instance" "ubuntu" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = var.instance_type
-  subnet_id     = aws_subnet.main.id
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.main.id
   vpc_security_group_ids = [aws_security_group.main.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
+  user_data = <<-EOF
+              #!/bin/bash
+              apt-get update -y
+              apt-get install -y nginx
+              systemctl enable nginx
+              systemctl start nginx
+              EOF
   tags = {
     Name = var.instance_name
   }
 }
-// ...existing code...
