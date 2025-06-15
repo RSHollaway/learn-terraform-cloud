@@ -120,7 +120,7 @@ resource "aws_instance" "ubuntu" {
   subnet_id              = aws_subnet.main.id
   vpc_security_group_ids = [aws_security_group.main.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
-  user_data = <<-EOF
+  user_data              = <<-EOF
               #!/bin/bash
               apt-get update -y
               apt-get install -y nginx
@@ -130,4 +130,79 @@ resource "aws_instance" "ubuntu" {
   tags = {
     Name = var.instance_name
   }
+}
+
+resource "aws_launch_template" "ubuntu" {
+  name_prefix   = "ubuntu-lt-"
+  image_id      = data.aws_ami.ubuntu.id
+  instance_type = var.instance_type
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ec2_profile.name
+  }
+  user_data = base64encode("#!/bin/bash\napt-get update -y\napt-get install -y nginx\nsystemctl enable nginx\nsystemctl start nginx\n")
+  vpc_security_group_ids = [aws_security_group.main.id]
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = var.instance_name
+    }
+  }
+}
+
+resource "aws_autoscaling_group" "ubuntu" {
+  vpc_zone_identifier = [aws_subnet.main.id]
+  desired_capacity   = 2
+  max_size           = 3
+  min_size           = 1
+  launch_template {
+    id      = aws_launch_template.ubuntu.id
+    version = "$Latest"
+  }
+  tag {
+    key                 = "Name"
+    value               = var.instance_name
+    propagate_at_launch = true
+  }
+  health_check_type         = "EC2"
+  health_check_grace_period = 300
+  force_delete              = true
+}
+
+resource "aws_lb" "app" {
+  name               = "app-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.main.id]
+  subnets            = [aws_subnet.main.id]
+}
+
+resource "aws_lb_target_group" "app" {
+  name     = "app-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
+resource "aws_lb_listener" "app" {
+  load_balancer_arn = aws_lb.app.arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+}
+
+resource "aws_autoscaling_attachment" "asg_attachment" {
+  autoscaling_group_name = aws_autoscaling_group.ubuntu.name
+  lb_target_group_arn    = aws_lb_target_group.app.arn
 }
