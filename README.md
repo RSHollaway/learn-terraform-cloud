@@ -4,7 +4,11 @@ This is an example Terraform configuration intended for use with the [Terraform 
 
 ## What will this do?
 
-This is a Terraform configuration that will create an EC2 instance in your AWS account. 
+This is a Terraform configuration that will create an EC2 instance in your AWS account, following best practices:
+
+- EC2 instance tag uses `Name` (capitalized) for AWS convention
+- All variables are explicitly typed for validation
+- Outputs now include the instance's public IP and public DNS
 
 When you set up a Workspace on Terraform Cloud, you can link to this repository. Terraform Cloud can then run `terraform plan` and `terraform apply` automatically when changes are pushed. For more information on how Terraform Cloud interacts with Version Control Systems, see [our VCS documentation](https://www.terraform.io/docs/cloud/run/ui.html).
 
