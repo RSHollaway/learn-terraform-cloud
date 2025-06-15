@@ -5,7 +5,8 @@ This document tracks planned enhancements for the AWS EC2 Terraform project.
 ## Feature List
 
 1. **Networking**: Define and manage a custom VPC, subnets, route tables, and security groups. Attach EC2 to subnet and security group.
-   - Status: Pending
+   - Status: In Progress
+   - Details: Added VPC, subnet, internet gateway, route table, security group, and attached EC2 instance to subnet and security group.
 2. **Provisioning**: Use user_data to bootstrap the instance and attach IAM roles.
    - Status: Pending
 3. **Scalability**: Implement Auto Scaling Group and Launch Template, add Elastic Load Balancer.
